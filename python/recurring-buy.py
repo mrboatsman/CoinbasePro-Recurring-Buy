@@ -190,7 +190,7 @@ if os.path.exists("/config/config.json"):
                               crypt_currency
                               =order_details['product_id'].split('-')[0],
                               price=0,      # will be implemented in the future
-                              timestamp=order_details['{created_at']
+                              timestamp=order_details['created_at']
                               )
                     )
 
