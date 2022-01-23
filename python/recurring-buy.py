@@ -1,14 +1,22 @@
 #!/usr/bin/python3
 
-import os, sys
-import json
 import math
-import coinbasepro, schedule, time
+import coinbasepro
+import coinbasepro.exceptions
+import schedule
+import time
 import settings
 import alerts as send_alert
+import logging
+import os
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 if os.path.exists("/config/config.json"):
-
+    logging.debug('Reading settings from config file')
     general_settings = settings.settings()
     send_alert = send_alert.alert_module()
 
@@ -30,6 +38,7 @@ if os.path.exists("/config/config.json"):
     auth_client = coinbasepro.AuthenticatedClient(key, b64secret, passphrase, api_url=apiurl)
 
     def check_funds(currency):
+        logging.debug('Checking funds')
         account_data = auth_client.get_accounts()
         for account in account_data:
             if account['currency'] == currency:
@@ -54,14 +63,17 @@ if os.path.exists("/config/config.json"):
             payment_id = "Error"
         return payment_id
 
+
     def add_funds(buy_total, current_funds, max_fund, fund_source, currency):
+        logging.debug('Adding funds')
         if buy_total > max_fund:
             error_msg = "Error: Total crypto cost is %s %s but max funding is set to %s %s. Unable to complete purchase.\nPlease check your config file." % (buy_total, currency, max_fund, currency)
             return ("Error", error_msg)
         else:
             fund_amount = buy_total - current_funds
-            fund_msg = "Your balance is %s %s, a deposit of %s %s will be made using your selected payment account." % (current_funds, currency, fund_amount, currency)
-            print(fund_msg)
+            fund_msg = "Your balance is %s %s, a deposit of %s %s will be made using your selected payment account." % (
+                current_funds, currency, fund_amount, currency)
+            logging.info(fund_msg)
             send_alert.discord(fund_msg)
             payment_id = get_funding_account(fund_amount, currency, fund_source)
             if payment_id == "Error":
@@ -86,8 +98,7 @@ if os.path.exists("/config/config.json"):
         for crypto in crypto_settings:
             buy_pair = crypto['Buy-Pair']
             buy_amount = crypto['Buy-Amount']
-            print("Initiating buy of %s %s of %s..." % (buy_amount, currency, buy_pair))
-            buy = auth_client.place_market_order(product_id=buy_pair, side="buy", funds=buy_amount)
+            logging.info("Initiating buy of %s %s of %s..." % (
             # Get Order details
             order_id = buy['id']
             order_details = auth_client.get_order(order_id=order_id)
@@ -119,50 +130,58 @@ if os.path.exists("/config/config.json"):
             init_buy(crypto_settings, currency)
         elif current_funds < buy_total:
             if enable_funding == True:
-                result = add_funds(buy_total, current_funds, max_fund, fund_source, currency)
+                result = add_funds(buy_total, current_funds, max_fund,
+                                   fund_source, currency)
                 if result[0] == "Error":
-                    print(result[1])
+                    logging.critical(result[1])
                     send_alert.discord(result[1])
                 elif result[0] == "Success":
                     init_buy(crypto_settings, currency)
                 else:
                     fund_msg = "Something went wrong attempting to add funds to your account."
-                    print(fund_msg)
+                    logging.critical(fund_msg)
                     send_alert.discord(fund_msg)
             elif enable_funding != True:
                 funding_msg = "Unable to complete your Coinbase Pro purchase.\n\
-Insufficient funds to make purchase and Auto-Funding is not enabled.\n\
-Please deposit at least %s %s into your account" % (buy_total, currency)
-                print(funding_msg)
+            Insufficient funds to make purchase and Auto-Funding is not enabled.\n\
+            Please deposit at least %s %s into your account" % (
+                    buy_total, currency)
+                logging.info(funding_msg)
                 send_alert.discord(funding_msg)
                 # print("Please deposit at least %s %s into your account" % (buy_total, currency))       
-    
+
+
     if run_every == "seconds":
         # Run every X seconds (mainly for testing purposes)
-        startupMsg = "Recurring Buy Bot Started!\nSchedule set for every %s seconds" % (repeat_time)
+        startupMsg = "Recurring Buy Bot Started!\nSchedule set for every %s seconds" % (
+            repeat_time)
         schedule.every(repeat_time).seconds.do(recurring_buy)
-        print(startupMsg)
+        logging.info(startupMsg)
         send_alert.discord(startupMsg)
     elif run_every == "days":
         # Run every X days at specified run time
-        startupMsg = "Recurring Buy Bot Started!\nSchedule set for every %s days at %s" % (repeat_time, run_time)
+        startupMsg = "Recurring Buy Bot Started!\n" \
+                     "Schedule set for every %s days at %s" % (
+            repeat_time, run_time)
         schedule.every(repeat_time).days.at(run_time).do(recurring_buy)
-        print(startupMsg)
+        logging.info(startupMsg)
         send_alert.discord(startupMsg)
     elif run_every == "weekday":
         # Run every specified weekday at run time
-        startupMsg = "Recurring Buy Bot Started!\nSchedule set for every %s at %s" % (run_day, run_time)
+        startupMsg = "Recurring Buy Bot Started!\n" \
+                     "Schedule set for every %s at %s" % (run_day, run_time)
         getattr(schedule.every(), run_day).at(run_time).do(recurring_buy)
-        print(startupMsg)
+        logging.info(startupMsg)
         send_alert.discord(startupMsg)
     else:
         startupMsg = "Unable to determine run type. Please check config..."
-        print(startupMsg)
+        logging.info(startupMsg)
         send_alert.discord(startupMsg)
-    
 
     while True:
         schedule.run_pending()
         time.sleep(1)
 else:
-    print("No config file found at '/config/config.json'. Please update your config file.")
+    logging.critical(
+        "No config file found at '/config/config.json'. "
+        "Please update your config file.")
