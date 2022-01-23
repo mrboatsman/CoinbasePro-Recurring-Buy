@@ -79,13 +79,17 @@ Compatible with docker-compose v2 schemas.
 version: "2.1"
 services:
   coinbase-pro-buy:
-    image: queball/coinbase-pro-recurring-buy
+    build: 
+      context: ./
+      dockerfile: Dockerfile
     container_name: coinbase-pro-recurring-buy
     environment:
-      - TZ=America/New_York
+      - TZ=Europe/Amsterdam
+      - DEBUG=True
     volumes:
-      - /path/to/folder:/config
+      - ./config:/config
     restart: unless-stopped
+
 ```
 
 ### Docker Compose with Plotply
