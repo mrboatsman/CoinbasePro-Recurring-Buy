@@ -66,6 +66,9 @@ if os.path.exists("/config/config.json"):
         storage.update_sync()
 
     def check_funds(currency):
+        auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                      passphrase,
+                                                      api_url=apiurl)
         logging.debug('Checking funds')
         account_data = auth_client.get_accounts()
         for account in account_data:
@@ -73,7 +76,12 @@ if os.path.exists("/config/config.json"):
                 currency_balance = math.floor(account['balance'])
                 return currency_balance
 
+
     def get_funding_account(fund_amount, currency, fund_source):
+        auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                      passphrase,
+                                                      api_url=apiurl)
+
         if fund_source == "default":
             payment_methods = auth_client.get_payment_methods()
             for payment in payment_methods:
@@ -82,7 +90,8 @@ if os.path.exists("/config/config.json"):
         elif fund_source == "coinbase":
             payment_methods = auth_client.get_coinbase_accounts()
             for payment in payment_methods:
-                if ((payment['currency'] == currency) and (math.floor(payment['balance']) >= fund_amount)):
+                if ((payment['currency'] == currency) and (
+                        math.floor(payment['balance']) >= fund_amount)):
                     payment_id = payment['id']
                     break
                 else:
@@ -94,8 +103,13 @@ if os.path.exists("/config/config.json"):
 
     def add_funds(buy_total, current_funds, max_fund, fund_source, currency):
         logging.debug('Adding funds')
+        auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                      passphrase,
+                                                      api_url=apiurl)
+
         if buy_total > max_fund:
-            error_msg = "Error: Total crypto cost is %s %s but max funding is set to %s %s. Unable to complete purchase.\nPlease check your config file." % (buy_total, currency, max_fund, currency)
+            error_msg = "Error: Total crypto cost is %s %s but max funding is set to %s %s. Unable to complete purchase.\nPlease check your config file." % (
+                buy_total, currency, max_fund, currency)
             return ("Error", error_msg)
         else:
             fund_amount = buy_total - current_funds
@@ -110,11 +124,15 @@ if os.path.exists("/config/config.json"):
             else:
                 if fund_source == "coinbase":
                     # Coinbase Deposit
-                    deposit = auth_client.deposit_from_coinbase(amount=fund_amount, currency=currency, coinbase_account_id=payment_id)
+                    deposit = auth_client.deposit_from_coinbase(
+                        amount=fund_amount, currency=currency,
+                        coinbase_account_id=payment_id)
                     return ("Success", deposit)
                 elif fund_source == "default":
                     # Default Deposit
-                    deposit = auth_client.deposit(amount=fund_amount, currency=currency, payment_method_id=payment_id)
+                    deposit = auth_client.deposit(amount=fund_amount,
+                                                  currency=currency,
+                                                  payment_method_id=payment_id)
                     time.sleep(10)
                     return ("Success", deposit)
                 else:
@@ -123,6 +141,9 @@ if os.path.exists("/config/config.json"):
 
     # Function to perform the buy
     def init_buy(crypto_settings, currency):
+        auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                      passphrase,
+                                                      api_url=apiurl)
         for crypto in crypto_settings:
             buy_pair = crypto['Buy-Pair']
             buy_amount = crypto['Buy-Amount']
