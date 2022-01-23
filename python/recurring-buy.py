@@ -189,12 +189,27 @@ if os.path.exists("/config/config.json"):
                               =order_details['product_id'].split('-')[1],
                               crypt_currency
                               =order_details['product_id'].split('-')[0],
-                              price=order_details['price'],
-                              timestamp=order_details['created_at']
+                              price=0,      # will be implemented in the future
+                              timestamp=order_details['{created_at']
                               )
                     )
 
                     retry = False
+
+
+    def withdraw():
+        withdraw_settings = settings.settings().withdraw()
+        currency = withdraw_settings['Currency']
+        threshold = withdraw_settings['Threshold']
+        address = withdraw_settings['Address']
+        funds = check_funds(currency)
+
+        if funds >= threshold:
+            auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                          passphrase,
+                                                          api_url=apiurl)
+            auth_client.withdraw_to_crypto(threshold, currency, address)
+
 
     def recurring_buy():
 
