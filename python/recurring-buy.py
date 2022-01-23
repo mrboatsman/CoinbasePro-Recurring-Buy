@@ -101,12 +101,48 @@ if os.path.exists("/config/config.json"):
             logging.info("Initiating buy of %s %s of %s..." % (
             # Get Order details
             order_id = buy['id']
-            order_details = auth_client.get_order(order_id=order_id)
-            crypto_bought = order_details['filled_size']
-            # buy_completed = order_details['done_at']
-            buy_message = "You bought %s of %s" % (crypto_bought, buy_pair)
-            print(buy_message)
-            send_alert.discord(buy_message)
+
+            retry = True
+            try_outs = 0
+            while retry and try_outs < 5:
+                """ Some times the coinbase pro order info api endpoint
+                is slow to deliver order info"""
+                try:
+                    order_details = auth_client.get_order(order_id=order_id)
+
+                except coinbasepro.exceptions.CoinbaseAPIError:
+                    try_outs = try_outs + 1
+                    logging.critical("Failed to get order info, retrying")
+                    logging.debug(f"Retry order info request number {try_outs}")
+                    retry = True
+                    time.sleep(try_outs * try_outs)
+                    if try_outs >= 5 and retry:
+                        logging.critical(f"Cannot reach Coinbase order after "
+                                         f"{try_outs} retries")
+                        raise
+
+                else:
+                    crypto_bought = order_details['filled_size']
+                    buy_message = "You bought %s of %s" % (
+                        crypto_bought, buy_pair)
+                    logging.info(buy_message)
+                    send_alert.discord(buy_message)
+                    storage_handler = Storage()
+                    storage_handler.insert_order(
+                        Order(order_id=order_id,
+                              fiat_cost=order_details['fill_fees'] +
+                                        order_details['executed_value'],
+                              amount_coins=order_details['filled_size'],
+                              fiat_currency
+                              =order_details['product_id'].split('-')[1],
+                              crypt_currency
+                              =order_details['product_id'].split('-')[0],
+                              price=order_details['price'],
+                              timestamp=order_details['created_at']
+                              )
+                    )
+
+                    retry = False
 
     def recurring_buy():
 
