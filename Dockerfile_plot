@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3
+
+WORKDIR /app
+RUN pip3 install schedule
+RUN pip3 install plotly
+COPY ./python/ .
+
+ENV TZ="America/New_York"
+
+VOLUME [ "/storage" ]
+
+CMD python3 ./plot.py

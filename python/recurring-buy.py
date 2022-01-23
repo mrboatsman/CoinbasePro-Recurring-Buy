@@ -9,6 +9,7 @@ import settings
 import alerts as send_alert
 import logging
 import os
+from storage_handler import Storage, Order
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -35,7 +36,34 @@ if os.path.exists("/config/config.json"):
         repeat_time = the_schedule['Repeat-Time']
         run_every = the_schedule['Scheduled-Run']
 
-    auth_client = coinbasepro.AuthenticatedClient(key, b64secret, passphrase, api_url=apiurl)
+    storage = Storage()
+    if not storage.synced():
+        logging.info("Syncing order history, this can take a while.")
+        auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                      passphrase,
+                                                      api_url=apiurl)
+        crypto_settings = general_settings.crypto()
+        cryptos = [pair_list['Buy-Pair'] for pair_list in crypto_settings]
+
+        for crypto in cryptos:
+            orders = auth_client.get_orders(crypto, ['done'])
+            for order in orders:
+                if order.get('status') == 'done' and order.get('side') == 'buy'\
+                        and order.get('product_id') == crypto:
+                    fiat_cost = float(order.get('fill_fees')) + float(
+                        order.get('executed_value'))
+                    my_dummy = order.get('price')
+                    storage.insert_order(
+                        Order(order_id=order.get('id'),
+                              fiat_cost=fiat_cost,
+                              amount_coins=order.get('filled_size'),
+                              fiat_currency=order.get('product_id').split('-')[1],
+                              crypt_currency=order.get('product_id').split('-')[0],
+                              price=0,     # For later implementation
+                              timestamp=order.get('created_at')
+                              )
+                    )
+        storage.update_sync()
 
     def check_funds(currency):
         logging.debug('Checking funds')
@@ -99,6 +127,9 @@ if os.path.exists("/config/config.json"):
             buy_pair = crypto['Buy-Pair']
             buy_amount = crypto['Buy-Amount']
             logging.info("Initiating buy of %s %s of %s..." % (
+                buy_amount, currency, buy_pair))
+            buy = auth_client.place_market_order(product_id=buy_pair,
+                                                 side="buy", funds=buy_amount)
             # Get Order details
             order_id = buy['id']
 

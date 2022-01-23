@@ -88,6 +88,53 @@ services:
     restart: unless-stopped
 ```
 
+### Docker Compose with Plotply
+```yaml
+---
+version: "2.1"
+services:
+  coinbase-pro-buy:
+    build: 
+      context: ./
+      dockerfile: Dockerfile
+    container_name: coinbase-pro-recurring-buy
+    environment:
+      - TZ=Europe/Amsterdam
+      - DEBUG=True
+    volumes:
+      - ./config:/config
+      - storage:/storage
+    depends_on:
+      - "plot-generation"
+    restart: unless-stopped
+
+  plot-generation:
+    build: 
+      context: ./
+      dockerfile: Dockerfile_plot
+    container_name: coinbase-pro-plot-generate
+    environment:
+      - TZ=Europe/Amsterdam
+    volumes:
+      - storage:/storage
+      - public_html:/public_html
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: coinbase-pro-plot-hosting
+    ports:
+      - 1480:80
+    volumes:
+       - public_html:/usr/share/nginx/html
+    depends_on:
+      - "plot-generation"
+
+volumes:
+  storage:
+  public_html:
+```
+
 ### Docker CLI
 
 ```bash
