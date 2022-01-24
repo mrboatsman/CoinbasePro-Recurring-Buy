@@ -49,8 +49,32 @@ def generate_plot():
     )
 
     # Add figure title
+    loss_profit = ((accumulated_value[-1] - invested[-1]) / invested[-1]) * 100
+    avarage_price = invested[-1] / accumulated_coins
+    sats = '{:,}'.format(int(accumulated_coins * 100000000)).replace(',', ' ')
+
     fig.update_layout(
-        title_text=f"DCA Coinbase Pro with smash buys<br>"
+        annotations=[
+            go.layout.Annotation(
+                text=f"Loss/Profit: {loss_profit:.2f}%<br>"
+                     f"Stacked sats: {sats} <br>"
+                     f"Total invested: {invested[-1]:.2f} EUR<br>"
+                     f"Average price: {avarage_price:.2f} EUR<br>",
+                align='left',
+                showarrow=False,
+                xref='paper',
+                yref='paper',
+                x=1.1,
+                y=0.0,
+                bordercolor='black',
+                borderwidth=1
+            )
+        ]
+
+    )
+
+    fig.update_layout(
+        title_text=f"Dollar-Cost Averaging - Stacking sats<br>"
                    f"Generated:{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
 
