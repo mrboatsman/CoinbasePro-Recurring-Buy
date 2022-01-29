@@ -50,6 +50,17 @@ The Coinbase Pro API Key will need a minimum of 'View' and 'Trade' permissions. 
 | **Alerts** |  |  |  |
 | Alerts-Enabled | Boolean | Enables sending buy and funding alerts to Discord. | Yes |
 | Discord-Webhook | String | The webhook URL you create in your Discord server. | If Alerts-Enabled is set to `true` |
+|                 |        |                                        |          |
+| **Withdraw**    |        |                                        | No       |
+| Currency        | String | Which crypto cyrrency to withdraw      | Yes      |
+| Fees            | Number | The transaction fees which is common   | Yes      |
+| Threshold       | Number | The limit before a withdraw shall be executed | Yes |
+| Address         | String | The receiver address of the funds      | Yes      |
+
+### Withdraw
+Use with caution! in Coinbase Pro activate address [whitelisting](https://help.coinbase.com/en/pro/managing-my-account/other/how-does-whitelisting-in-the-address-book-work)
+before use this option. Activate an API with `Transfer` permision. 
+
 
 ## Discord Alerts
 

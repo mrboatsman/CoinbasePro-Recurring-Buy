@@ -28,3 +28,7 @@ class settings:
     def alerts(self):
         alerts_info = self.data['Alerts']
         return alerts_info
+
+    def withdraw(self):
+        withdraw_info = self.data.get('Withdraw')
+        return withdraw_info

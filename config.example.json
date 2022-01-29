@@ -38,5 +38,13 @@
             "Alerts-Enabled" : true,
             "Discord-Webhook" : "DISCORD_WEBHOOK_URL"
         }
+    ],
+    "Withdraw" : [
+        {
+            "Currency": "BTC",
+            "Fees": 0.000003,
+            "Threshold" : 0.01,
+            "Address": "bc1CHANGE_ME"
+        }
     ]
 }

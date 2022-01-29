@@ -1,14 +1,17 @@
 #!/usr/bin/python3
 
+import logging
 import math
+import os
+import time
+from decimal import *
+
 import coinbasepro
 import coinbasepro.exceptions
 import schedule
-import time
-import settings
+
 import alerts as send_alert
-import logging
-import os
+import settings
 from storage_handler import Storage, Order
 
 logging.basicConfig(
@@ -73,7 +76,7 @@ if os.path.exists("/config/config.json"):
         account_data = auth_client.get_accounts()
         for account in account_data:
             if account['currency'] == currency:
-                currency_balance = math.floor(account['balance'])
+                currency_balance = account['available']
                 return currency_balance
 
 
@@ -198,17 +201,29 @@ if os.path.exists("/config/config.json"):
 
 
     def withdraw():
+        getcontext().prec = 8
         withdraw_settings = settings.settings().withdraw()
-        currency = withdraw_settings['Currency']
-        threshold = withdraw_settings['Threshold']
-        address = withdraw_settings['Address']
-        funds = check_funds(currency)
 
-        if funds >= threshold:
-            auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
-                                                          passphrase,
-                                                          api_url=apiurl)
-            auth_client.withdraw_to_crypto(threshold, currency, address)
+        for withdraw_currency in withdraw_settings:
+            address = withdraw_currency['Address']
+            if address == 'bc1CHANGE_ME':
+                break
+
+            threshold = Decimal(f"{withdraw_currency['Threshold']}")
+            additional_fees = Decimal(f"{withdraw_currency['Fees']}")
+            currency = withdraw_currency['Currency']
+
+            funds = check_funds(currency)
+            if funds >= (threshold + additional_fees):
+                withdraw_amount = round(float(funds - additional_fees), 8)
+                logging.info(f"Withdrawing {withdraw_amount} {currency}")
+                auth_client = coinbasepro.AuthenticatedClient(key, b64secret,
+                                                              passphrase,
+                                                              api_url=apiurl)
+
+                auth_client.withdraw_to_crypto(withdraw_amount,
+                                               currency, address)
+            time.sleep(3)
 
 
     def recurring_buy():
@@ -281,6 +296,11 @@ if os.path.exists("/config/config.json"):
         logging.info(startupMsg)
         send_alert.discord(startupMsg)
 
+    if general_settings.withdraw():
+        logging.info("Adding Widthdraw")
+        schedule.every().day.at("05:30").do(withdraw)
+
+    withdraw()
     while True:
         schedule.run_pending()
         time.sleep(1)
